@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC Response Guide | Entra ID Token Theft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2332;
+            --bg-elevated: #232d3f;
+            --accent-cyan: #00f5d4;
+            --accent-magenta: #f72585;
+            --accent-yellow: #fee440;
+            --accent-blue: #3a86ff;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: rgba(0, 245, 212, 0.15);
+            --glow-cyan: 0 0 30px rgba(0, 245, 212, 0.3);
+            --glow-magenta: 0 0 30px rgba(247, 37, 133, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        /* Animated background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 245, 212, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 245, 212, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        header {
+            padding: 4rem 0 3rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(247, 37, 133, 0.15);
+            border: 1px solid var(--accent-magenta);
+            color: var(--accent-magenta);
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        .alert-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent-magenta);
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(247, 37, 133, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(247, 37, 133, 0); }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+        }
+
+        .threat-tags {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .threat-tag {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 0.4rem 0.9rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Section styling */
+        section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-number {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--bg-primary);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '▸';
+            color: var(--accent-magenta);
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(0, 245, 212, 0.3);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent-cyan), var(--accent-magenta));
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            background: var(--bg-primary);
+            border: 2px solid var(--accent-cyan);
+            border-radius: 50%;
+            transform: translateX(-5px);
+        }
+
+        .timeline-item:hover::before {
+            background: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+        }
+
+        .timeline-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            margin-bottom: 0.25rem;
+        }
+
+        /* Lists */
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        ul li::before {
+            content: '◆';
+            position: absolute;
+            left: 0;
+            color: var(--accent-cyan);
+            font-size: 0.6rem;
+            top: 0.4rem;
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .code-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .code-title::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: var(--accent-blue);
+            border-radius: 3px;
+        }
+
+        .code-copy {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.3rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .code-copy:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        pre {
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+
+        .code-comment { color: var(--text-muted); }
+        .code-keyword { color: var(--accent-magenta); }
+        .code-string { color: var(--accent-yellow); }
+        .code-function { color: var(--accent-cyan); }
+        .code-operator { color: var(--accent-blue); }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg-elevated);
+            text-align: left;
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-cyan);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(0, 245, 212, 0.03);
+        }
+
+        /* Status badges */
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-critical {
+            background: rgba(247, 37, 133, 0.15);
+            color: var(--accent-magenta);
+        }
+
+        .status-warning {
+            background: rgba(254, 228, 64, 0.15);
+            color: var(--accent-yellow);
+        }
+
+        .status-info {
+            background: rgba(58, 134, 255, 0.15);
+            color: var(--accent-blue);
+        }
+
+        /* Alert box */
+        .alert-box {
+            display: flex;
+            gap: 1rem;
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .alert-critical {
+            background: rgba(247, 37, 133, 0.1);
+            border-left: 3px solid var(--accent-magenta);
+        }
+
+        .alert-warning {
+            background: rgba(254, 228, 64, 0.1);
+            border-left: 3px solid var(--accent-yellow);
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .alert-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Command inline */
+        code {
+            background: var(--bg-elevated);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--accent-cyan);
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist li::before {
+            content: none;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--accent-cyan);
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checkbox:hover {
+            background: rgba(0, 245, 212, 0.2);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 4rem;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .footer-brand {
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body::before {
+                display: none;
+            }
+
+            .code-copy {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="alert-badge">High Severity Alert</div>
+            <h1>Entra ID Token Theft</h1>
+            <p class="subtitle">SOC Analyst Response Guide for session cookie theft and offline access detection in Microsoft Entra ID environments.</p>
+            <div class="threat-tags">
+                <span class="threat-tag">T1539 - Steal Web Session Cookie</span>
+                <span class="threat-tag">T1528 - Steal Application Access Token</span>
+                <span class="threat-tag">Credential Access</span>
+            </div>
+        </header>
+
+        <!-- Section 1: Immediate Triage -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">01</span>
+                <h2>Immediate Triage</h2>
+            </div>
+            <p>Within the first 15 minutes, validate the alert and gather critical context to determine if containment is needed.</p>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-time">0-5 MINUTES</div>
+                    <h3>Validate the Alert</h3>
+                    <ul>
+                        <li>Check if user's location/IP matches normal behavior patterns</li>
+                        <li>Review "Detected Offline" context — indicates token used without active session</li>
+                        <li>Correlate timestamps between legitimate login and suspicious activity</li>
+                        <li>Check for impossible travel scenarios</li>
+                    </ul>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-time">5-15 MINUTES</div>
+                    <h3>Gather Context</h3>
+                    <ul>
+                        <li>Pull Entra ID Sign-in Logs for affected user (last 24-72 hours)</li>
+                        <li>Look for anomalies: unfamiliar IPs, new devices, unusual user agents</li>
+                        <li>Review Audit Logs for privilege escalation or config changes</li>
+                        <li>Check Conditional Access policy evaluation results</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert-box alert-warning">
+                <div class="alert-icon">⚠️</div>
+                <div class="alert-content">
+                    <div class="alert-title">Key Indicator</div>
+                    <p class="alert-text">"Detected Offline" typically means a refresh token or session cookie was used to obtain new access tokens without the user being actively authenticated — a strong indicator of token theft.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Containment -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">02</span>
+                <h2>Containment Actions</h2>
+            </div>
+            <p>If malicious activity is confirmed, execute these containment steps immediately to limit attacker access.</p>
+
+            <div class="card">
+                <h3>Token & Session Revocation</h3>
+                <ul class="checklist">
+                    <li>
+                        <div class="checkbox"></div>
+                        <div>
+                            <strong>Revoke all refresh tokens</strong><br>
+                            <code>Revoke-AzureADUserAllRefreshToken -ObjectId &lt;user-id&gt;</code>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="checkbox"></div>
+                        <div>
+                            <strong>Force re-authentication</strong><br>
+                            Disable then re-enable the user account in Entra portal
+                        </div>
+                    </li>
+                    <li>
+                        <div class="checkbox"></div>
+                        <div>
+                            <strong>Reset user password</strong><br>
+                            Require password change on next sign-in
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Persistence Removal</h3>
+                <ul class="checklist">
+                    <li>
+                        <div class="checkbox"></div>
+                        <div>
+                            <strong>Review OAuth app consents</strong><br>
+                            Check for suspicious enterprise app permissions granted by user
+                        </div>
+                    </li>
+                    <li>
+                        <div class="checkbox"></div>
+                        <div>
+                            <strong>Check mail rules & forwarding</strong><br>
+                            Look for inbox rules, forwarding addresses, or delegates in M365
+                        </div>
+                    </li>
+                    <li>
+                        <div class="checkbox"></div>
+                        <div>
+                            <strong>Audit MFA methods</strong><br>
+                            Verify no unauthorized authentication methods were added
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="alert-box alert-critical">
+                <div class="alert-icon">🚨</div>
+                <div class="alert-content">
+                    <div class="alert-title">Critical: Check for OAuth Abuse</div>
+                    <p class="alert-text">Attackers commonly use illicit OAuth consent grants as a persistence mechanism. Review enterprise applications with delegated permissions, especially Mail.Read, Files.ReadWrite, and User.Read.All.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Investigation -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">03</span>
+                <h2>Investigation Checklist</h2>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Investigation Area</th>
+                            <th>What to Check</th>
+                            <th>Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Authentication</strong></td>
+                            <td>MFA status, Conditional Access policy hits/bypasses, authentication methods used</td>
+                            <td><span class="status status-critical">Critical</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Device Compliance</strong></td>
+                            <td>Is the device compliant/managed? Any new device registrations?</td>
+                            <td><span class="status status-critical">Critical</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Applications</strong></td>
+                            <td>Suspicious OAuth consents, enterprise app access, service principal activity</td>
+                            <td><span class="status status-critical">Critical</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Lateral Movement</strong></td>
+                            <td>SharePoint, Teams, OneDrive, Azure resource access from suspicious sessions</td>
+                            <td><span class="status status-warning">High</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Persistence</strong></td>
+                            <td>New MFA methods, service principals, registered devices, app registrations</td>
+                            <td><span class="status status-warning">High</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Data Access</strong></td>
+                            <td>File downloads, email access, sensitive resource enumeration</td>
+                            <td><span class="status status-info">Medium</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 4: Hunting Queries -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">04</span>
+                <h2>Detection & Hunting Queries</h2>
+            </div>
+            <p>Use these KQL queries in Microsoft Sentinel or Log Analytics to investigate the incident.</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">User Sign-in Analysis</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><span class="code-comment">// Analyze sign-ins for the affected user</span>
+<span class="code-function">SigninLogs</span>
+<span class="code-operator">|</span> <span class="code-keyword">where</span> UserPrincipalName <span class="code-operator">==</span> <span class="code-string">"affected_user@domain.com"</span>
+<span class="code-operator">|</span> <span class="code-keyword">where</span> TimeGenerated <span class="code-operator">></span> <span class="code-function">ago</span>(<span class="code-string">7d</span>)
+<span class="code-operator">|</span> <span class="code-keyword">project</span> TimeGenerated, Location, IPAddress, 
+          AppDisplayName, DeviceDetail, Status, 
+          ConditionalAccessStatus, RiskState
+<span class="code-operator">|</span> <span class="code-keyword">order by</span> TimeGenerated <span class="code-keyword">desc</span></pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Token Replay Detection</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><span class="code-comment">// Detect potential token replay attacks</span>
+<span class="code-function">SigninLogs</span>
+<span class="code-operator">|</span> <span class="code-keyword">where</span> TimeGenerated <span class="code-operator">></span> <span class="code-function">ago</span>(<span class="code-string">24h</span>)
+<span class="code-operator">|</span> <span class="code-keyword">where</span> TokenIssuerType <span class="code-operator">==</span> <span class="code-string">"AzureAD"</span>
+<span class="code-operator">|</span> <span class="code-keyword">where</span> AuthenticationRequirement <span class="code-operator">==</span> <span class="code-string">"singleFactorAuthentication"</span>
+<span class="code-operator">|</span> <span class="code-keyword">where</span> ResultType <span class="code-operator">==</span> <span class="code-string">0</span>
+<span class="code-operator">|</span> <span class="code-keyword">summarize</span> <span class="code-function">count</span>(), <span class="code-function">dcount</span>(IPAddress), 
+            <span class="code-function">make_set</span>(IPAddress) <span class="code-keyword">by</span> UserPrincipalName
+<span class="code-operator">|</span> <span class="code-keyword">where</span> dcount_IPAddress <span class="code-operator">></span> <span class="code-string">3</span></pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Suspicious OAuth Consent Grants</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><span class="code-comment">// Find potentially malicious OAuth app consents</span>
+<span class="code-function">AuditLogs</span>
+<span class="code-operator">|</span> <span class="code-keyword">where</span> TimeGenerated <span class="code-operator">></span> <span class="code-function">ago</span>(<span class="code-string">30d</span>)
+<span class="code-operator">|</span> <span class="code-keyword">where</span> OperationName <span class="code-operator">==</span> <span class="code-string">"Consent to application"</span>
+<span class="code-operator">|</span> <span class="code-keyword">extend</span> InitiatedBy <span class="code-operator">=</span> tostring(InitiatedBy.user.userPrincipalName)
+<span class="code-operator">|</span> <span class="code-keyword">extend</span> AppName <span class="code-operator">=</span> tostring(TargetResources[0].displayName)
+<span class="code-operator">|</span> <span class="code-keyword">project</span> TimeGenerated, InitiatedBy, AppName, 
+          TargetResources, AdditionalDetails</pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Impossible Travel Detection</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copy</button>
+                </div>
+                <pre><span class="code-comment">// Identify impossible travel scenarios</span>
+<span class="code-function">SigninLogs</span>
+<span class="code-operator">|</span> <span class="code-keyword">where</span> TimeGenerated <span class="code-operator">></span> <span class="code-function">ago</span>(<span class="code-string">7d</span>)
+<span class="code-operator">|</span> <span class="code-keyword">where</span> ResultType <span class="code-operator">==</span> <span class="code-string">0</span>
+<span class="code-operator">|</span> <span class="code-keyword">summarize</span> Locations <span class="code-operator">=</span> <span class="code-function">make_list</span>(Location), 
+            Times <span class="code-operator">=</span> <span class="code-function">make_list</span>(TimeGenerated),
+            IPs <span class="code-operator">=</span> <span class="code-function">make_list</span>(IPAddress) <span class="code-keyword">by</span> UserPrincipalName
+<span class="code-operator">|</span> <span class="code-keyword">where</span> <span class="code-function">array_length</span>(Locations) <span class="code-operator">></span> <span class="code-string">1</span>
+<span class="code-operator">|</span> <span class="code-keyword">mv-expand</span> Locations, Times, IPs</pre>
+            </div>
+        </section>
+
+        <!-- Section 5: Escalation -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">05</span>
+                <h2>Escalation Criteria</h2>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>Escalate to IR Team</h3>
+                    <ul>
+                        <li>Evidence of data exfiltration (bulk downloads, API data access)</li>
+                        <li>Privilege escalation (Global Admin, Exchange Admin, etc.)</li>
+                        <li>Attacker persistence mechanisms confirmed</li>
+                        <li>Multiple affected users identified</li>
+                        <li>Access to sensitive workloads (Azure resources, M365 admin)</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>Escalate to Management</h3>
+                    <ul>
+                        <li>Executive or VIP account compromised</li>
+                        <li>Regulatory data potentially accessed</li>
+                        <li>Third-party/customer data exposure risk</li>
+                        <li>Business email compromise indicators</li>
+                        <li>Ransomware or destructive activity signs</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Prevention -->
+        <section>
+            <div class="section-header">
+                <span class="section-number">06</span>
+                <h2>Prevention & Hardening</h2>
+            </div>
+
+            <div class="card">
+                <h3>Recommended Controls</h3>
+                <div class="table-wrapper" style="margin: 1rem 0; border: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Control</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Token Protection (Preview)</strong></td>
+                                <td>Bind tokens to device, preventing use on other machines</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Continuous Access Evaluation</strong></td>
+                                <td>Near real-time token revocation for critical events</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Compliant Device Requirement</strong></td>
+                                <td>Require Intune-managed, compliant devices via Conditional Access</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sign-in Risk Policies</strong></td>
+                                <td>Block or require MFA for high-risk sign-ins</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Admin Consent Workflow</strong></td>
+                                <td>Prevent users from consenting to apps without approval</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p class="footer-text">SOC Response Guide • <span class="footer-brand">Entra ID Token Theft</span> • Last Updated: February 2026</p>
+        </footer>
+    </div>
+
+    <script>
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('pre').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+
+        // Interactive checkboxes
+        document.querySelectorAll('.checkbox').forEach(checkbox => {
+            checkbox.addEventListener('click', function() {
+                this.style.background = this.style.background ? '' : 'var(--accent-cyan)';
+                this.innerHTML = this.innerHTML ? '' : '✓';
+                this.style.color = 'var(--bg-primary)';
+                this.style.display = 'flex';
+                this.style.alignItems = 'center';
+                this.style.justifyContent = 'center';
+                this.style.fontWeight = 'bold';
+            });
+        });
+    </script>
+</body>
+</html>
